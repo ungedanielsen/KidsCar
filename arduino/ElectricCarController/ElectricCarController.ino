@@ -77,7 +77,7 @@ void loop()
       Serial.print(" - Value = ");
       Serial.print(val);
       Serial.print(" - Gear = ");
-      Serial.println(gear);;
+      Serial.println(gear);
 
     }
    }
