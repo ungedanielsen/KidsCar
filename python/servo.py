@@ -18,7 +18,7 @@ joy = []
 usbport = "/dev/ttyUSB0"  
   
 # define usb serial connection to Arduino  
-ser = serial.Serial(usbport, 9600)  
+ser = serial.Serial(usbport, 115200)  
   
 # handle joystick event  
 def handleJoyEvent(e):  
@@ -74,7 +74,7 @@ def handleJoyEvent(e):
             if (axis == "Y"):
                 pos = e.dict['value']
                 # convert joystick position to servo increment, 0-180  
-                move = round(pos * 45, 0)
+                move = round(pos * 90, 0)
                 print move  
                 if (move < 0):  
                     servo = int(90 - abs(move))  
@@ -138,7 +138,15 @@ def handleJoyEvent(e):
                 
   
     elif e.type == pygame.JOYBUTTONDOWN:  
-        str = "Button: %d" % (e.dict['button'])  
+        str = "Button: %d" % (e.dict['button'])
+        if (e.dict['button'] == 12):
+            ser.write(chr(255))
+            ser.write(chr(12))
+            ser.write(chr(1))
+        if (e.dict['button'] == 13):
+            ser.write(chr(255))
+            ser.write(chr(13))
+            ser.write(chr(1))
         # uncomment to debug  
         output(str, e.dict['joy'])  
         # Button 0 (trigger) to quit  
