@@ -7,7 +7,7 @@ Servo servo1;      //Servo on pin 2
 //int maxPulse = 2400;
 //int refreshTime = 20;
 
-//Values
+//Values2
 
 int centerServo;    //center servo position
 //int pulseWidth;     //servo pulse width
