@@ -15,7 +15,7 @@ import pygame
 joy = []  
   
 # Arduino USB port address (try "COM5" on Win32)  
-usbport = "/dev/ttyUSB0"  
+usbport = "/dev/ttyUSB1"  
   
 # define usb serial connection to Arduino  
 ser = serial.Serial(usbport, 115200)  
@@ -54,11 +54,11 @@ def handleJoyEvent(e):
             if (axis == "X"):  
                 pos = e.dict['value']  
                 # convert joystick position to servo increment, 0-180  
-                move = round(pos * 180, 0)  
+                move = round(pos * 127, 0)  
                 if (pos < 0):  
-                    servo = int(90 - abs(move))  
+                    servo = int(127 + abs(move))  
                 else:  
-                    servo = int(90 + move)  
+                    servo = int(127 - move)
                 # convert position to ASCII character  
                 servoPosition = chr(servo)
                 #Send staring byte
@@ -74,12 +74,11 @@ def handleJoyEvent(e):
             if (axis == "Y"):
                 pos = e.dict['value']
                 # convert joystick position to servo increment, 0-180  
-                move = round(pos * 90, 0)
-                print move  
-                if (move < 0):  
-                    servo = int(90 - abs(move))  
+                move = round(pos * 127, 0)  
+                if (pos < 0):  
+                    servo = int(127 + abs(move))  
                 else:  
-                    servo = int(90 + move)  
+                    servo = int(127 - move)  
                 # convert position to ASCII character  
                 servoPosition = chr(servo)
                 print servo  
@@ -87,7 +86,7 @@ def handleJoyEvent(e):
                 ser.write(chr(255))
                 # sends direction
                 #if (pos>0) :
-                ser.write(chr(1))
+                ser.write(chr(2))
                 #else :
                 #    ser.write(chr(2))
                 # and send to Arduino over serial connection  
@@ -100,10 +99,10 @@ def handleJoyEvent(e):
                 pos = e.dict['value']
                 # convert joystick position to servo increment, 0-180  
                 move = round(pos * 127, 0)  
-                if (pos >0 ):  
-                    servo = int(254* abs(pos))  
+                if (pos < 0):  
+                    servo = int(127 + abs(move))  
                 else:  
-                    sservo = int(0)  
+                    servo = int(127 - move)
                 # convert position to ASCII character  
                 servoPosition = chr(servo)
                 #Send staring byte
@@ -119,11 +118,11 @@ def handleJoyEvent(e):
             if (axis == "Throttle"):
                 pos = e.dict['value']
                 # convert joystick position to servo increment, 0-180  
-                move = round(pos * 90, 0)  
-                if (move < 0):  
-                    servo = int(90 - abs(move))  
+                move = round(pos * 127, 0)  
+                if (pos < 0):  
+                    servo = int(127 + abs(move))  
                 else:  
-                    servo = int(90 + move)  
+                    servo = int(127 - move) 
                 # convert position to ASCII character  
                 servoPosition = chr(servo)
                 #Send staring byte
