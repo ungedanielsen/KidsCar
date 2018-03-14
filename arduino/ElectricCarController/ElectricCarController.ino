@@ -1,10 +1,15 @@
 
 #include <math.h>
+#include <SPI.h>
 
 //Relayes
 #define RelayOn 2
 #define RelayForward 3
 #define RelayBackward 4
+
+//SPI
+byte address = 0x11;
+int CS= 10;
 
 
 int input[3];
@@ -18,12 +23,18 @@ int i;
 
 void setup()
 {
+  pinMode (CS, OUTPUT);
+  SPI.begin();
+  digitalPotWrite(127);
+  delay(1000);
   pinMode(RelayForward, OUTPUT);
   pinMode(RelayBackward, OUTPUT);
+  pinMode(RelayOn, OUTPUT);
   
   digitalWrite(RelayForward, HIGH);
   digitalWrite(RelayBackward, HIGH);
   Serial.begin(115200);
+  digitalWrite(RelayOn, LOW);
 }
 
 void loop()
@@ -67,47 +78,53 @@ void loop()
         case 2:  speed = val;
                  break;
         case 12: if (gear < 5) gear++;
+                 speed = 0;
                  break;
         case 13: if (gear > -1) gear--;
+                 speed = val;
                  break;
       }
 
       switch (gear) {
         case -1:
-          speed = (int)map(speed,0,254,0,51);
+          speed = (int)map(speed,0,254,60,35);
           digitalWrite(RelayForward, HIGH);
           digitalWrite(RelayBackward, LOW);
+          break;
         case 0:
-          speed = 0;
+          speed = 127;
           digitalWrite(RelayBackward, HIGH);
           digitalWrite(RelayForward, HIGH);
           break;
         case 1:
-          speed = (int)map(speed,0,254,0,51);
+          speed = (int)map(speed,0,254,60,46);
           digitalWrite(RelayBackward, HIGH);
           digitalWrite(RelayForward, LOW);
           break;
         case 2:
-          speed = (int)map(speed,0,254,0,102);
+          speed = (int)map(speed,0,254,60,35);
           digitalWrite(RelayBackward, HIGH);
           digitalWrite(RelayForward, LOW);
           break;
         case 3:
-          speed = (int)map(speed,0,254,0,153);
+          speed = (int)map(speed,0,254,60,24);
           digitalWrite(RelayBackward, HIGH);
           digitalWrite(RelayForward, LOW);
           break;
         case 4:
-          speed = (int)map(speed,0,254,0,205);
+          speed = (int)map(speed,0,254,60,13);
           digitalWrite(RelayBackward, HIGH);
           digitalWrite(RelayForward, LOW);
           break;
         case 5:
-          speed = (int)map(speed,0,254,0,255);
+          speed = (int)map(speed,0,254,60,3);
           digitalWrite(RelayBackward, HIGH);
           digitalWrite(RelayForward, LOW);
           break;
       }
+
+      if (speed == 60) speed = 127;
+      digitalPotWrite(speed);
       Serial.print("Device = ");
       Serial.print(device);
       Serial.print(" - Value = ");
@@ -122,4 +139,12 @@ void loop()
     }
    }
  }
+
+ int digitalPotWrite(int value)
+{
+  digitalWrite(CS, LOW);
+  SPI.transfer(address);
+  SPI.transfer(value);
+  digitalWrite(CS, HIGH);
+}
  

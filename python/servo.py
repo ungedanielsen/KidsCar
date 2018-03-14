@@ -15,7 +15,7 @@ import pygame
 joy = []  
   
 # Arduino USB port address (try "COM5" on Win32)  
-usbport = "/dev/ttyUSB1"  
+usbport = "/dev/ttyACM1"  
   
 # define usb serial connection to Arduino  
 ser = serial.Serial(usbport, 115200)  
