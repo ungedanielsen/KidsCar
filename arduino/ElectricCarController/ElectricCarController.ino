@@ -9,8 +9,9 @@
 
 //SPI
 byte address = 0x11;
-int CS= 10;
 
+int CS = 10;
+int CSBack = 11;
 
 int input[3];
 int gear = 0;
@@ -23,9 +24,11 @@ int i;
 
 void setup()
 {
-  pinMode (CS, OUTPUT);
+  pinMode(CSBack, OUTPUT);
+  pinMode(CS, OUTPUT);
   SPI.begin();
-  digitalPotWrite(127);
+  digitalPotWrite(CS, 127);
+  digitalPotWrite(CSBack, 127);
   delay(1000);
   pinMode(RelayForward, OUTPUT);
   pinMode(RelayBackward, OUTPUT);
@@ -87,7 +90,7 @@ void loop()
 
       switch (gear) {
         case -1:
-          speed = (int)map(speed,0,254,60,35);
+          speed = (int)map(speed,0,254,0,255);
           digitalWrite(RelayForward, HIGH);
           digitalWrite(RelayBackward, LOW);
           break;
@@ -124,7 +127,7 @@ void loop()
       }
 
       if (speed == 60) speed = 127;
-      digitalPotWrite(speed);
+      digitalPotWrite(CS,speed);
       Serial.print("Device = ");
       Serial.print(device);
       Serial.print(" - Value = ");
@@ -140,11 +143,11 @@ void loop()
    }
  }
 
- int digitalPotWrite(int value)
+ int digitalPotWrite(int pin,int value)
 {
-  digitalWrite(CS, LOW);
+  digitalWrite(pin, LOW);
   SPI.transfer(address);
   SPI.transfer(value);
-  digitalWrite(CS, HIGH);
+  digitalWrite(pin, HIGH);
 }
  
