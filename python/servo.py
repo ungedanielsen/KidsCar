@@ -15,10 +15,15 @@ import pygame
 joy = []  
   
 # Arduino USB port address (try "COM5" on Win32)  
-usbport = "/dev/ttyACM2"  
+usbport = "/dev/ttyACM0"  
   
 # define usb serial connection to Arduino  
-ser = serial.Serial(usbport, 115200)  
+ser = serial.Serial(usbport, 115200)
+
+#Let the Arduino know that the PI & Python is ready
+ser.write(chr(255))
+ser.write(chr(254))
+ser.write(chr(254)) 
   
 # handle joystick event  
 def handleJoyEvent(e):  
@@ -50,7 +55,7 @@ def handleJoyEvent(e):
             # uncomment to debug  
             output(str, e.dict['joy'])  
   
-            # X to Servo 1
+            # Steering to Servo 1
             if (axis == "X"):  
                 pos = e.dict['value']  
                 # convert joystick position to servo increment, 0-180  
@@ -94,7 +99,7 @@ def handleJoyEvent(e):
                 # uncomment to debug  
                 print "Y Servo 2", servo
                     
-            #Twsit to Servo 3
+            #Break to Servo 3
             if (axis == "Twist"):
                 pos = e.dict['value']
                 # convert joystick position to servo increment, 0-180  
@@ -106,11 +111,11 @@ def handleJoyEvent(e):
                 # convert position to ASCII character  
                 servoPosition = chr(servo)
                 #Send staring byte
-                #ser.write(chr(255))
+                ser.write(chr(255))
                 # send to servo 1
-                #ser.write(chr(3))
+                ser.write(chr(3))
                 # and send to Arduino over serial connection  
-                #ser.write(servoPosition)  
+                ser.write(servoPosition)  
                 # uncomment to debug  
                 print "Twist Servo 3", servo
             
@@ -141,11 +146,15 @@ def handleJoyEvent(e):
         if (e.dict['button'] == 12):
             ser.write(chr(255))
             ser.write(chr(12))
-            ser.write(chr(1))
+            ser.write(chr(0))
         if (e.dict['button'] == 13):
             ser.write(chr(255))
             ser.write(chr(13))
-            ser.write(chr(1))
+            ser.write(chr(0))
+        if (e.dict['button'] == 3):
+            ser.write(chr(255))
+            ser.write(chr(4))
+            ser.write(chr(0))
         # uncomment to debug  
         output(str, e.dict['joy'])  
         # Button 0 (trigger) to quit  

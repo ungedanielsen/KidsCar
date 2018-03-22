@@ -4,44 +4,48 @@
 
 //Relayes
 #define RelayOn 2
-#define RelayForward 3
-#define RelayBackward 4
+
 
 //SPI
 byte address = 0x11;
 
 int CS = 10;
-int CSBack = 11;
 
 int input[3];
 int gear = 0;
 int startbyte;
-int device;          //the pin the servo is on
-int val;            // 0-254
+int device;          
+int val = 130;            // 0-254
 int speed = 0;
-int lastVal = -100;
+int setSpeed = 0;
+int breakPedal = 0;
+int steering;
 int i;
+bool enableMotor = false;
+unsigned long previousMillis = 0;
+const long interval = 100000;
 
 void setup()
 {
-  pinMode(CSBack, OUTPUT);
   pinMode(CS, OUTPUT);
   SPI.begin();
-  digitalPotWrite(CS, 127);
-  digitalPotWrite(CSBack, 127);
+  digitalPotWrite(CS, val);
   delay(1000);
-  pinMode(RelayForward, OUTPUT);
-  pinMode(RelayBackward, OUTPUT);
   pinMode(RelayOn, OUTPUT);
-  
-  digitalWrite(RelayForward, HIGH);
-  digitalWrite(RelayBackward, HIGH);
   Serial.begin(115200);
-  digitalWrite(RelayOn, LOW);
+  digitalWrite(RelayOn, HIGH);
 }
 
 void loop()
-{ 
+{
+  unsigned long currentMillis = millis();
+
+  //Check if we have recieved a command the last x ms. If not, disable the car.
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis;
+    digitalWrite(RelayOn, HIGH);
+  }
+
   //Wait for serial input
   if (Serial.available() > 2)
   {
@@ -61,73 +65,87 @@ void loop()
       //Second byte = which position?
       val = input[1];
 
-      if (lastVal = -100) lastVal = val;
-
-      if (abs(lastVal-val)>2) {
-        val = lastVal;
-        Serial.print("bigger jump than 2");
-      }
       // Paket error checking and recovery
       if (val == 255)
       {
         val = 255;
       }
-      lastVal = val;
+
+      
             
       switch (device)
       {
         case 1:
-                 break;
-        case 2:  speed = val;
-                 break;
-        case 12: if (gear < 5) gear++;
-                 speed = 0;
-                 break;
-        case 13: if (gear > -1) gear--;
-                 speed = val;
-                 break;
+          steering = val;
+          previousMillis = currentMillis;
+          break;
+
+        case 2: //Throttle
+          Serial.println("WHY???");
+          speed = val;
+          breakPedal = 0;
+          previousMillis = currentMillis;
+          break;
+
+        case 3: //Break
+          breakPedal = val;
+          breakPedal = (int)map(breakPedal,0,254,140,70);
+          break;
+
+        case 4:
+          if (enableMotor) {
+            enableMotor = false;
+            digitalWrite(RelayOn, HIGH);
+          }
+          else {
+            enableMotor = true;
+            digitalWrite(RelayOn, LOW);
+          }
+          break;
+
+        case 12: //Gear up
+          if (gear < 5) gear++;
+          //speed = 0;
+          break;
+        case 13: //Gear down
+          if (gear > -1) gear--;
+          //speed = 0;
+          break;
+        case 254: //Initiate car
+          if (val == 254) {}
+            digitalWrite(RelayOn, LOW);
+
+          break;
       }
 
       switch (gear) {
         case -1:
-          speed = (int)map(speed,0,254,0,255);
-          digitalWrite(RelayForward, HIGH);
-          digitalWrite(RelayBackward, LOW);
+          setSpeed = (int)map(speed,0,254,140,70);
           break;
         case 0:
-          speed = 127;
-          digitalWrite(RelayBackward, HIGH);
-          digitalWrite(RelayForward, HIGH);
+          setSpeed = 130;
           break;
         case 1:
-          speed = (int)map(speed,0,254,60,46);
-          digitalWrite(RelayBackward, HIGH);
-          digitalWrite(RelayForward, LOW);
+          setSpeed = (int)map(speed,0,254,188,201);
           break;
         case 2:
-          speed = (int)map(speed,0,254,60,35);
-          digitalWrite(RelayBackward, HIGH);
-          digitalWrite(RelayForward, LOW);
+          setSpeed = (int)map(speed,0,254,188,214);
           break;
         case 3:
-          speed = (int)map(speed,0,254,60,24);
-          digitalWrite(RelayBackward, HIGH);
-          digitalWrite(RelayForward, LOW);
+          setSpeed = (int)map(speed,0,254,188,227);
           break;
         case 4:
-          speed = (int)map(speed,0,254,60,13);
-          digitalWrite(RelayBackward, HIGH);
-          digitalWrite(RelayForward, LOW);
+          setSpeed = (int)map(speed,0,254,188,240);
           break;
         case 5:
-          speed = (int)map(speed,0,254,60,3);
-          digitalWrite(RelayBackward, HIGH);
-          digitalWrite(RelayForward, LOW);
+          setSpeed = (int)map(speed,0,254,188,253);
           break;
       }
-
-      if (speed == 60) speed = 127;
-      digitalPotWrite(CS,speed);
+      if (setSpeed == 188) {
+        setSpeed = 130;
+      }
+      
+      digitalPotWrite(CS,setSpeed);
       Serial.print("Device = ");
       Serial.print(device);
       Serial.print(" - Value = ");
@@ -135,10 +153,9 @@ void loop()
       Serial.print(" - Speed = ");
       Serial.print(speed);
       Serial.print(" - Gear = ");
-      Serial.println(gear);
-     
-        
-      
+      Serial.print(gear);
+      Serial.print(" - Steering = ");
+      Serial.println(steering);
     }
    }
  }
