@@ -3,7 +3,8 @@
 #include <SPI.h>
 
 //Relayes
-#define RelayOn 2
+#define RelayOn 3
+#define EnableGas 2
 
 
 //SPI
@@ -31,9 +32,12 @@ void setup()
   SPI.begin();
   digitalPotWrite(CS, val);
   delay(1000);
+  pinMode(EnableGas, OUTPUT);
   pinMode(RelayOn, OUTPUT);
   Serial.begin(115200);
   digitalWrite(RelayOn, HIGH);
+  digitalWrite(EnableGas, HIGH);
+
 }
 
 void loop()
@@ -120,7 +124,7 @@ void loop()
 
       switch (gear) {
         case -1:
-          setSpeed = (int)map(speed,0,254,140,70);
+          setSpeed = (int)map(speed,0,254,130,70);
           break;
         case 0:
           setSpeed = 130;
@@ -144,6 +148,13 @@ void loop()
       if (setSpeed == 188) {
         setSpeed = 130;
       }
+
+      if (setSpeed == 130) {
+        digitalWrite(EnableGas, HIGH);
+      }
+      else {
+        digitalWrite(EnableGas, LOW);
+      }
       
       digitalPotWrite(CS,setSpeed);
       Serial.print("Device = ");
@@ -151,7 +162,7 @@ void loop()
       Serial.print(" - Value = ");
       Serial.print(val);
       Serial.print(" - Speed = ");
-      Serial.print(speed);
+      Serial.print(setSpeed);
       Serial.print(" - Gear = ");
       Serial.print(gear);
       Serial.print(" - Steering = ");
