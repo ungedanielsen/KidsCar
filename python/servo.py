@@ -7,26 +7,31 @@
 import signal
 import sys
 import threading
+#import timer
 import signal
 import serial  
-import pygame  
+import pygame
+
+global throttle
+throttle = 0
+global steering
+steering = 127
+global gear
+gear = 1
+
   
 # allow multiple joysticks  
 joy = []  
   
 # Arduino USB port address (try "COM5" on Win32)  
-usbport = "/dev/ttyACM0"  
+usbport = "/dev/ttyACM2"  
   
 # define usb serial connection to Arduino  
-ser = serial.Serial(usbport, 115200)
+ser = serial.Serial(usbport, 57600)
 
-#Let the Arduino know that the PI & Python is ready
-ser.write(chr(255))
-ser.write(chr(254))
-ser.write(chr(254)) 
-  
 # handle joystick event  
-def handleJoyEvent(e):  
+def handleJoyEvent(e):
+    global throttle, steering, gear
     if e.type == pygame.JOYAXISMOTION:  
         axis = "unknown"  
         if (e.dict['axis'] == 0):  
@@ -61,19 +66,9 @@ def handleJoyEvent(e):
                 # convert joystick position to servo increment, 0-180  
                 move = round(pos * 127, 0)  
                 if (pos < 0):  
-                    servo = int(127 + abs(move))  
+                    steering = int(127 + abs(move))  
                 else:  
-                    servo = int(127 - move)
-                # convert position to ASCII character  
-                servoPosition = chr(servo)
-                #Send staring byte
-                ser.write(chr(255))
-                # send to servo 1
-                ser.write(chr(1))
-                # and send to Arduino over serial connection  
-                ser.write(servoPosition)  
-                # uncomment to debug  
-                print "X Servo 1", servo
+                    steering = int(127 - move)
            
             #Throttle to Servo 2
             if (axis == "Y"):
@@ -81,23 +76,9 @@ def handleJoyEvent(e):
                 # convert joystick position to servo increment, 0-180  
                 move = round(pos * 127, 0)  
                 if (pos < 0):  
-                    servo = int(127 + abs(move))  
+                    throttle = int(127 + abs(move))  
                 else:  
-                    servo = int(127 - move)  
-                # convert position to ASCII character  
-                servoPosition = chr(servo)
-                print servo  
-                #Send staring byte
-                ser.write(chr(255))
-                # sends direction
-                #if (pos>0) :
-                ser.write(chr(2))
-                #else :
-                #    ser.write(chr(2))
-                # and send to Arduino over serial connection  
-                ser.write(servoPosition)  
-                # uncomment to debug  
-                print "Y Servo 2", servo
+                    throttle = int(127 - move)
                     
             #Break to Servo 3
             if (axis == "Twist"):
@@ -108,14 +89,6 @@ def handleJoyEvent(e):
                     servo = int(127 + abs(move))  
                 else:  
                     servo = int(127 - move)
-                # convert position to ASCII character  
-                servoPosition = chr(servo)
-                #Send staring byte
-                ser.write(chr(255))
-                # send to servo 1
-                ser.write(chr(3))
-                # and send to Arduino over serial connection  
-                ser.write(servoPosition)  
                 # uncomment to debug  
                 print "Twist Servo 3", servo
             
@@ -128,15 +101,6 @@ def handleJoyEvent(e):
                     servo = int(127 + abs(move))  
                 else:  
                     servo = int(127 - move) 
-                # convert position to ASCII character  
-                servoPosition = chr(servo)
-                #Send staring byte
-                #ser.write(chr(255))
-                # send to servo 1
-                #ser.write(chr(4))
-                # and send to Arduino over serial connection  
-               # ser.write(servoPosition)  
-                # uncomment to debug  
                 print "Throttle Servo 4", servo
     
                 
@@ -144,13 +108,11 @@ def handleJoyEvent(e):
     elif e.type == pygame.JOYBUTTONDOWN:  
         str = "Button: %d" % (e.dict['button'])
         if (e.dict['button'] == 12):
-            ser.write(chr(255))
-            ser.write(chr(12))
-            ser.write(chr(0))
+            if (gear < 6):
+                gear = gear + 1
         if (e.dict['button'] == 13):
-            ser.write(chr(255))
-            ser.write(chr(13))
-            ser.write(chr(0))
+            if (gear > 0):
+                gear = gear -1
         if (e.dict['button'] == 3):
             ser.write(chr(255))
             ser.write(chr(4))
@@ -175,12 +137,32 @@ def joystickControl():
         e = pygame.event.wait()  
         if (e.type == pygame.JOYAXISMOTION or e.type == pygame.JOYBUTTONDOWN):  
             handleJoyEvent(e)  
+
+def serialWrite():
+    global throttle, steering, gear
+    ser.write(chr(255))
+    ser.write(chr(throttle))
+    ser.write(chr(steering))
+    ser.write(chr(gear))
+    ser.write(chr(gear))
+
+    print throttle
+    print steering
+    print str(gear)
+    #tt = ser.read()
+    #print tt
+    global timer
+    timer = threading.Timer(0.1, serialWrite)
+    timer.start()
   
 # main method  
 def main():  
     # initialize pygame  
     pygame.joystick.init()  
-    pygame.display.init()  
+    pygame.display.init()
+    timer = threading.Timer(0.1, serialWrite, ())
+    timer.start()  # after 60 seconds, 'callback' will be called
+
     if not pygame.joystick.get_count():  
         print "\nPlease connect a joystick and run again.\n"  
         quit()  
@@ -193,7 +175,11 @@ def main():
     print "Depress trigger (button 0) to quit.\n"  
   
     # run joystick listener loop  
-    joystickControl()  
+    joystickControl()
+
+    
+
+
   
 # allow use as a module or standalone script  
 if __name__ == "__main__":  

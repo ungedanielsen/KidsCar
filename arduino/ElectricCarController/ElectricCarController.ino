@@ -5,19 +5,23 @@
 //Relayes
 #define RelayOn 3
 #define EnableGas 2
-
+#define rfThrottlePin 4
+#define rfStearingPin 5
+#define rfOverridePin 6
 
 //SPI
 byte address = 0x11;
-
 int CS = 10;
-
+bool radioPresent = false;
+bool radioOverride = true;
+int rfOverride = 0;
+int rfThrottle = 0;
 int input[3];
-int gear = 0;
+int gear = 1;
 int startbyte;
 int device;          
 int val = 130;            // 0-254
-int speed = 0;
+int speed = 130;
 int setSpeed = 0;
 int breakPedal = 0;
 int steering;
@@ -34,7 +38,10 @@ void setup()
   delay(1000);
   pinMode(EnableGas, OUTPUT);
   pinMode(RelayOn, OUTPUT);
-  Serial.begin(115200);
+  pinMode(rfOverridePin, INPUT);
+  pinMode(rfThrottlePin, INPUT);
+  pinMode(rfStearingPin, INPUT);
+  Serial.begin(57600);
   digitalWrite(RelayOn, HIGH);
   digitalWrite(EnableGas, HIGH);
 
@@ -42,7 +49,25 @@ void setup()
 
 void loop()
 {
+  rfOverride = pulseIn(rfOverridePin, HIGH, 25000);
+  rfThrottle = pulseIn(rfThrottlePin, HIGH, 25000);
+  //Check if radio is present and that we get steady values. /Noice happens
+  if (rfOverride < 1010 && rfThrottle > 1010) {
+    radioPresent = false;
+  }
+  else {
+    radioPresent = true;
+  }
+  if (rfOverride > 1200) {
+    radioOverride = true;
+  }
+  else {
+    radioOverride = false;
+  }
+
+
   unsigned long currentMillis = millis();
+
 
   //Check if we have recieved a command the last x ms. If not, disable the car.
   if (currentMillis - previousMillis >= interval) {
@@ -51,97 +76,57 @@ void loop()
   }
 
   //Wait for serial input
-  if (Serial.available() > 2)
+  if (Serial.available() > 4)
   {
     // Read the first byte
     startbyte = Serial.read();
+    speed = Serial.read();
+    steering = Serial.read();
+    gear = Serial.read();
+
     //If it's 255 then continue
+    
     if (startbyte == 255)
     {
-      //then get the next two bytes
-      for(i=0;i<2;i++)
-      {
-        input[i] = Serial.read();
-      }
-      
-      device = input[0];
-      
-      //Second byte = which position?
-      val = input[1];
+      char str[5];
+      str[0] = speed;
+      str[1] = steering;
+      str[3] = gear;
+      str[4] = '\0';
+      Serial.print(str);
+      Serial.print(speed);
+      Serial.print(steering);
+      Serial.print(gear);
+      Serial.println("\n");
+      Serial.print("OverRide: ");
+      Serial.println(rfOverride);
+      Serial.print("rfTrottle: ");
+      Serial.println(rfThrottle);
 
-      // Paket error checking and recovery
-      if (val == 255)
-      {
-        val = 255;
-      }
-
-      
-            
-      switch (device)
-      {
-        case 1:
-          steering = val;
-          previousMillis = currentMillis;
-          break;
-
-        case 2: //Throttle
-          Serial.println("WHY???");
-          speed = val;
-          breakPedal = 0;
-          previousMillis = currentMillis;
-          break;
-
-        case 3: //Break
-          breakPedal = val;
-          breakPedal = (int)map(breakPedal,0,254,140,70);
-          break;
-
-        case 4:
-          if (enableMotor) {
-            enableMotor = false;
-            digitalWrite(RelayOn, HIGH);
-          }
-          else {
-            enableMotor = true;
-            digitalWrite(RelayOn, LOW);
-          }
-          break;
-
-        case 12: //Gear up
-          if (gear < 5) gear++;
-          //speed = 0;
-          break;
-        case 13: //Gear down
-          if (gear > -1) gear--;
-          //speed = 0;
-          break;
-        case 254: //Initiate car
-          if (val == 254) {}
-            digitalWrite(RelayOn, LOW);
-
-          break;
+      if (radioOverride) {
+        //Read radio to override
       }
 
       switch (gear) {
-        case -1:
+        case 0:
           setSpeed = (int)map(speed,0,254,130,70);
           break;
-        case 0:
+        case 1:
           setSpeed = 130;
           break;
-        case 1:
+        case 2:
           setSpeed = (int)map(speed,0,254,188,201);
           break;
-        case 2:
+        case 3:
           setSpeed = (int)map(speed,0,254,188,214);
           break;
-        case 3:
+        case 4:
           setSpeed = (int)map(speed,0,254,188,227);
           break;
-        case 4:
+        case 5:
           setSpeed = (int)map(speed,0,254,188,240);
           break;
-        case 5:
+        case 6:
           setSpeed = (int)map(speed,0,254,188,253);
           break;
       }
@@ -156,7 +141,15 @@ void loop()
         digitalWrite(EnableGas, LOW);
       }
       
-      digitalPotWrite(CS,setSpeed);
+      if (radioPresent) {
+        digitalWrite(RelayOn, LOW);
+        digitalPotWrite(CS,setSpeed);
+      }
+      else {
+        digitalWrite(RelayOn, HIGH);
+        digitalWrite(EnableGas, HIGH);
+      }
+      /*
       Serial.print("Device = ");
       Serial.print(device);
       Serial.print(" - Value = ");
@@ -167,6 +160,7 @@ void loop()
       Serial.print(gear);
       Serial.print(" - Steering = ");
       Serial.println(steering);
+      */
     }
    }
  }
