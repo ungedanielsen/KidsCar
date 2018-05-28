@@ -5,6 +5,7 @@
 #  pywin32  - http://sourceforge.net/projects/pywin32/  
 #  
 import signal
+from time import sleep
 import sys
 import threading
 #import timer
@@ -18,20 +19,23 @@ global steering
 steering = 127
 global gear
 gear = 1
+NewCommand = 0
+startMarker = 60
+endMarker = 62
 
   
 # allow multiple joysticks  
 joy = []  
   
 # Arduino USB port address (try "COM5" on Win32)  
-usbport = "/dev/ttyACM2"  
+usbport = "/dev/ttyACM1"  
   
 # define usb serial connection to Arduino  
 ser = serial.Serial(usbport, 57600)
 
 # handle joystick event  
 def handleJoyEvent(e):
-    global throttle, steering, gear
+    global throttle, steering, gear, NewCommand
     if e.type == pygame.JOYAXISMOTION:  
         axis = "unknown"  
         if (e.dict['axis'] == 0):  
@@ -69,6 +73,7 @@ def handleJoyEvent(e):
                     steering = int(127 + abs(move))  
                 else:  
                     steering = int(127 - move)
+                NewCommand = 1
            
             #Throttle to Servo 2
             if (axis == "Y"):
@@ -79,6 +84,7 @@ def handleJoyEvent(e):
                     throttle = int(127 + abs(move))  
                 else:  
                     throttle = int(127 - move)
+                NewCommand = 1
                     
             #Break to Servo 3
             if (axis == "Twist"):
@@ -110,9 +116,11 @@ def handleJoyEvent(e):
         if (e.dict['button'] == 12):
             if (gear < 6):
                 gear = gear + 1
+                NewCommand = 1
         if (e.dict['button'] == 13):
             if (gear > 0):
                 gear = gear -1
+                NewCommand = 1
         if (e.dict['button'] == 3):
             ser.write(chr(255))
             ser.write(chr(4))
@@ -125,43 +133,59 @@ def handleJoyEvent(e):
             ser.close()  
             quit()  
     else:  
-        pass  
+        pass
   
 # print the joystick position  
 def output(line, stick):  
-    print "Joystick: %d; %s" % (stick, line)  
+    svada=0
+    # print "Joystick: %d; %s" % (stick, line)  
   
 # wait for joystick input  
-def joystickControl():  
+def joystickControl():
+    global throttle, steering, gear  
     while True:  
         e = pygame.event.wait()  
         if (e.type == pygame.JOYAXISMOTION or e.type == pygame.JOYBUTTONDOWN):  
-            handleJoyEvent(e)  
+            handleJoyEvent(e)
+            sendControllerCommand()
+            #confirmation = readControllerCommand()
+            #print confirmation
 
-def serialWrite():
-    global throttle, steering, gear
-    ser.write(chr(255))
-    ser.write(chr(throttle))
-    ser.write(chr(steering))
-    ser.write(chr(gear))
-    ser.write(chr(gear))
 
-    print throttle
-    print steering
-    print str(gear)
-    #tt = ser.read()
-    #print tt
-    global timer
-    timer = threading.Timer(0.1, serialWrite)
-    timer.start()
+def sendControllerCommand():
+    global throttle, steering, gear, NewCommand
+    command = "<" + str(throttle) + "," + str(steering) + "," + str(gear) + ">"
+    print command
+    ser.write(command)
+    NewCommand = 0
+
+def readControllerCommand():
+  global startMarker, endMarker, messageFromArduino
+  
+  ck = ""
+  x = "z" # any value that is not an end- or startMarker
+  byteCount = -1 # to allow for the fact that the last increment will be one too many
+  
+  # wait for the start character
+  while  ord(x) != startMarker: 
+    x = ser.read()
+  
+  # save data until the end marker is found
+  while ord(x) != endMarker:
+    if ord(x) != startMarker:
+      ck = ck + x 
+      byteCount += 1
+    x = ser.read()
+  return("<" + ck + ">")
+
   
 # main method  
 def main():  
     # initialize pygame  
     pygame.joystick.init()  
     pygame.display.init()
-    timer = threading.Timer(0.1, serialWrite, ())
-    timer.start()  # after 60 seconds, 'callback' will be called
+    #timer = threading.Timer(0.3, serialWrite, ())
+    #timer.start()  # after 60 seconds, 'callback' will be called
 
     if not pygame.joystick.get_count():  
         print "\nPlease connect a joystick and run again.\n"  
