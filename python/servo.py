@@ -183,7 +183,7 @@ def readControllerCommand():
 def main():  
     # initialize pygame  
     pygame.joystick.init()  
-    pygame.display.init()
+    #pygame.display.init()
     #timer = threading.Timer(0.3, serialWrite, ())
     #timer.start()  # after 60 seconds, 'callback' will be called
 
